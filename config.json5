@@ -1,0 +1,4 @@
+{
+    socket: "/dev/cyberevents/action",
+    mqtt: "mqtt://mqtt:1883"
+}

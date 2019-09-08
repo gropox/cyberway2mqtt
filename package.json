@@ -1,0 +1,11 @@
+{
+  "name": "cyber2mqtt",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "basescript": "^0.0.4",
+    "debug": "^4.1.1",
+    "mqtt": "^3.0.0"
+  }
+}

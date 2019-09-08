@@ -1,0 +1,88 @@
+version: "2.1"
+
+services:
+
+  mqtt:
+    container_name: mqtt
+    image: eclipse-mosquitto
+    ports: 1883:1883
+    networks:
+      - cyberway-net
+
+  mongo:
+    container_name: mongo
+    image: mongo:4.0.6-xenial
+    restart: always
+    healthcheck:
+       test: mongo --eval 'db.getCollectionNames()'
+       interval: 2s
+       timeout: 2s
+       retries: 10
+    volumes:
+      - cyberway-mongodb-data:/data/db
+    ports:
+      - 127.0.0.1:27019:27017
+    networks:
+      - cyberway-net
+
+  nodeosd:
+    container_name: nodeosd
+    user: "1000:1000"
+    image: cyberway/cyberway:v2.0.1
+    depends_on:
+      mongo:
+        condition: service_healthy
+#    command: /opt/cyberway/bin/nodeosd.sh --data-dir /opt/cyberway/bin/data-dir -e --http-alias=nodeosd:8888 --http-alias=127.0.0.1:8888 --http-alias=localhost:8888 --genesis-json /opt/cyberway/bin/genesis-data/genesis.json --genesis-data /opt/cyberway/bin/genesis-data/genesis.dat --fix-reversible-blocks 
+#    command: /opt/cyberway/bin/nodeosd.sh --data-dir /opt/cyberway/bin/data-dir -e --http-alias=nodeosd:8888 --http-alias=127.0.0.1:8888 --http-alias=localhost:8888 --genesis-json /opt/cyberway/bin/genesis-data/genesis.json --genesis-data /opt/cyberway/bin/genesis-data/genesis.dat --replay-blockchain
+    command: /opt/cyberway/bin/nodeosd.sh --data-dir /opt/cyberway/bin/data-dir -e --http-alias=nodeosd:8888 --http-alias=127.0.0.1:8888 --http-alias=localhost:8888 --genesis-json /opt/cyberway/bin/genesis-data/genesis.json --genesis-data /opt/cyberway/bin/genesis-data/genesis.dat
+    hostname: nodeosd
+    ports:
+      - 8888:8888
+      - 9876:9876
+    expose:
+      - "8888"
+    volumes:
+      - cyberway-nodeos-data:/opt/cyberway/bin/data-dir
+      - ${PWD}/config.ini:/opt/cyberway/bin/data-dir/config.ini
+      - ${PWD}/genesis-data:/opt/cyberway/bin/genesis-data
+      - ${PWD}/cyberevents:/dev/cyberevents
+    cap_add:
+      - IPC_LOCK
+    stop_grace_period: 10m
+    networks:
+      - cyberway-net
+
+  keosd:
+    container_name: keosd
+    image: cyberway/cyberway:stable
+    command: /opt/cyberway/bin/keosd
+    networks:
+      - cyberway-net
+    volumes:
+      - /home/georg/cyberway/smarts:/smarts/
+      - /home/georg/cyberway/w/:/w/
+    hostname: keosd
+
+  boltalkin:
+#    user: "1000:1000"
+    container_name: boltalkin
+    image: boltalkin
+    command: sh -c "sleep 5s ; id; ls -l /dev/cyberevents; pwd; node index.js debug"
+    volumes:
+#      - ${PWD}/cyberevents:/dev/cyberevents
+      - ${PWD}/boltalkin:/etc/boltalkin
+    volumes_from:
+      - nodeosd
+    networks:
+      - cyberway-net
+
+volumes:
+ cyberway-mongodb-data:
+   external: true
+ cyberway-nodeos-data:
+   external: true
+ cyberway-keosd-data:
+   external: true
+
+networks:
+  cyberway-net:
